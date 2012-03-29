@@ -31,10 +31,10 @@ namespace :mage do
   DESC
   task :setup, :roles => [:web, :app], :except => { :no_release => true } do
     if app_shared_dirs
-      app_shared_dirs.each { |link| run "#{try_sudo} mkdir -p #{shared_path}#{link} && chmod g+w #{shared_path}#{link}"}
+      app_shared_dirs.each { |link| run "#{try_sudo} mkdir -p #{shared_path}#{link} && #{try_sudo} chmod g+w #{shared_path}#{link}"}
     end
     if app_shared_files
-      app_shared_files.each { |link| run "#{try_sudo} touch #{shared_path}#{link} && chmod g+w #{shared_path}#{link}" }
+      app_shared_files.each { |link| run "#{try_sudo} touch #{shared_path}#{link} && #{try_sudo} chmod g+w #{shared_path}#{link}" }
     end
   end
 
