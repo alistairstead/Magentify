@@ -28,6 +28,8 @@ role :app,        "000.000.000.000"   # This may be the same as your `Web` serve
 
 set  :keep_releases,  3
 
+set :mage_base, ""   # If Magento is installed in a sub-directory you can configure it here, for example "/shop"
+
 set :app_symlinks, ["/media", "/var", "/sitemaps", "/staging"]
 set :app_shared_dirs, ["/app/etc", "/sitemaps", "/media", "/var", "/staging"]
 set :app_shared_files, ["/app/etc/local.xml"]
