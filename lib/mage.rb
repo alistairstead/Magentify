@@ -15,6 +15,7 @@ _cset(:app_shared_files)  {
 }
 
 _cset :compile, false
+_cset :mage_base, ""
 
 namespace :mage do
   desc <<-DESC
@@ -31,10 +32,10 @@ namespace :mage do
   DESC
   task :setup, :roles => [:web, :app], :except => { :no_release => true } do
     if app_shared_dirs
-      app_shared_dirs.each { |link| run "#{try_sudo} mkdir -p #{shared_path}#{link} && #{try_sudo} chmod g+w #{shared_path}#{link}"}
+      app_shared_dirs.each { |link| run "#{try_sudo} mkdir -p #{shared_path}#{mage_base}#{link} && #{try_sudo} chmod g+w #{shared_path}#{mage_base}#{link}"}
     end
     if app_shared_files
-      app_shared_files.each { |link| run "#{try_sudo} touch #{shared_path}#{link} && #{try_sudo} chmod g+w #{shared_path}#{link}" }
+      app_shared_files.each { |link| run "#{try_sudo} touch #{shared_path}#{mage_base}#{link} && #{try_sudo} chmod g+w #{shared_path}#{mage_base}#{link}" }
     end
   end
 
@@ -50,16 +51,16 @@ namespace :mage do
 
     if app_symlinks
       # Remove the contents of the shared directories if they were deployed from SCM
-      app_symlinks.each { |link| run "#{try_sudo} rm -rf #{latest_release}#{link}" }
+      app_symlinks.each { |link| run "#{try_sudo} rm -rf #{latest_release}#{mage_base}#{link}" }
       # Add symlinks the directoris in the shared location
-      app_symlinks.each { |link| run "ln -nfs #{shared_path}#{link} #{latest_release}#{link}" }
+      app_symlinks.each { |link| run "ln -nfs #{shared_path}#{mage_base}#{link} #{latest_release}#{mage_base}#{link}" }
     end
 
     if app_shared_files
       # Remove the contents of the shared directories if they were deployed from SCM
-      app_shared_files.each { |link| run "#{try_sudo} rm -rf #{latest_release}/#{link}" }
+      app_shared_files.each { |link| run "#{try_sudo} rm -rf #{latest_release}#{mage_base}#{link}" }
       # Add symlinks the directoris in the shared location
-      app_shared_files.each { |link| run "ln -s #{shared_path}#{link} #{latest_release}#{link}" }
+      app_shared_files.each { |link| run "ln -s #{shared_path}#{mage_base}#{link} #{latest_release}#{mage_base}#{link}" }
     end
   end
 
@@ -67,21 +68,21 @@ namespace :mage do
     Clear the Magento Cache
   DESC
   task :cc, :roles => [:web, :app] do
-    run "cd #{current_path} && rm -rf var/cache/*"
+    run "cd #{current_path}#{mage_base} && rm -rf var/cache/*"
   end
 
   desc <<-DESC
     Disable the Magento install by creating the maintenance.flag in the web root.
   DESC
   task :disable, :roles => :web do
-    run "cd #{current_path} && touch maintenance.flag"
+    run "cd #{current_path}#{mage_base} && touch maintenance.flag"
   end
 
   desc <<-DESC
     Enable the Magento stores by removing the maintenance.flag in the web root.
   DESC
   task :enable, :roles => :web do
-    run "cd #{current_path} && rm -f maintenance.flag"
+    run "cd #{current_path}#{mage_base} && rm -f maintenance.flag"
   end
 
   desc <<-DESC
@@ -89,7 +90,7 @@ namespace :mage do
   DESC
   task :compiler, :roles => [:web, :app] do
     if fetch(:compile, true)
-      run "cd #{current_path}/shell && php -f compiler.php -- compile"
+      run "cd #{current_path}#{mage_base}/shell && php -f compiler.php -- compile"
     end
   end
 
@@ -97,28 +98,28 @@ namespace :mage do
     Enable the Magento compiler
   DESC
   task :enable_compiler, :roles => [:web, :app] do
-    run "cd #{current_path}/shell && php -f compiler.php -- enable"
+    run "cd #{current_path}#{mage_base}/shell && php -f compiler.php -- enable"
   end
 
   desc <<-DESC
     Disable the Magento compiler
   DESC
   task :disable_compiler, :roles => [:web, :app] do
-    run "cd #{current_path}/shell && php -f compiler.php -- disable"
+    run "cd #{current_path}#{mage_base}/shell && php -f compiler.php -- disable"
   end
 
   desc <<-DESC
     Run the Magento indexer
   DESC
   task :indexer, :roles => [:web, :app] do
-    run "cd #{current_path}/shell && php -f indexer.php -- reindexall"
+    run "cd #{current_path}#{mage_base}/shell && php -f indexer.php -- reindexall"
   end
 
   desc <<-DESC
     Clean the Magento logs
   DESC
   task :clean_log, :roles => [:web, :app] do
-    run "cd #{current_path}/shell && php -f log.php -- clean"
+    run "cd #{current_path}#{mage_base}/shell && php -f log.php -- clean"
   end
 end
 
