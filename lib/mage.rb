@@ -67,7 +67,7 @@ namespace :mage do
     Clear the Magento Cache
   DESC
   task :cc, :roles => [:web, :app] do
-    run "cd #{current_path} && rm -rf var/cache/*"
+    run "cd #{current_path} && php -r \"require_once('app/Mage.php'); Mage::app()->cleanCache();\""
   end
 
   desc <<-DESC
