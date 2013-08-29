@@ -15,6 +15,7 @@ _cset(:app_shared_files)  {
 }
 
 _cset :compile, false
+_cset :app_webroot, ''
 
 namespace :mage do
   desc <<-DESC
@@ -45,7 +46,7 @@ namespace :mage do
     Any directories deployed from the SCM are first removed and then replaced with \
     symlinks to the same directories within the shared location.
   DESC
-  task :finalize_update, :roles => [:web, :app], :except => { :no_release => true } do    
+  task :finalize_update, :roles => [:web, :app], :except => { :no_release => true } do
     run "chmod -R g+w #{latest_release}" if fetch(:group_writable, true)
 
     if app_symlinks
@@ -67,21 +68,21 @@ namespace :mage do
     Clear the Magento Cache
   DESC
   task :cc, :roles => [:web, :app] do
-    run "cd #{current_path} && rm -rf var/cache/*"
+    run "cd #{current_path}#{app_webroot} && rm -rf var/cache/*"
   end
 
   desc <<-DESC
     Disable the Magento install by creating the maintenance.flag in the web root.
   DESC
   task :disable, :roles => :web do
-    run "cd #{current_path} && touch maintenance.flag"
+    run "cd #{current_path}#{app_webroot} && touch maintenance.flag"
   end
 
   desc <<-DESC
     Enable the Magento stores by removing the maintenance.flag in the web root.
   DESC
   task :enable, :roles => :web do
-    run "cd #{current_path} && rm -f maintenance.flag"
+    run "cd #{current_path}#{app_webroot} && rm -f maintenance.flag"
   end
 
   desc <<-DESC
@@ -89,7 +90,7 @@ namespace :mage do
   DESC
   task :compiler, :roles => [:web, :app] do
     if fetch(:compile, true)
-      run "cd #{current_path}/shell && php -f compiler.php -- compile"
+      run "cd #{current_path}#{app_webroot}/shell && php -f compiler.php -- compile"
     end
   end
 
@@ -97,28 +98,28 @@ namespace :mage do
     Enable the Magento compiler
   DESC
   task :enable_compiler, :roles => [:web, :app] do
-    run "cd #{current_path}/shell && php -f compiler.php -- enable"
+    run "cd #{current_path}#{app_webroot}/shell && php -f compiler.php -- enable"
   end
 
   desc <<-DESC
     Disable the Magento compiler
   DESC
   task :disable_compiler, :roles => [:web, :app] do
-    run "cd #{current_path}/shell && php -f compiler.php -- disable"
+    run "cd #{current_path}#{app_webroot}/shell && php -f compiler.php -- disable"
   end
 
   desc <<-DESC
     Run the Magento indexer
   DESC
   task :indexer, :roles => [:web, :app] do
-    run "cd #{current_path}/shell && php -f indexer.php -- reindexall"
+    run "cd #{current_path}#{app_webroot}/shell && php -f indexer.php -- reindexall"
   end
 
   desc <<-DESC
     Clean the Magento logs
   DESC
   task :clean_log, :roles => [:web, :app] do
-    run "cd #{current_path}/shell && php -f log.php -- clean"
+    run "cd #{current_path}#{app_webroot}/shell && php -f log.php -- clean"
   end
 end
 
