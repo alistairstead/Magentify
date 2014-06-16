@@ -16,6 +16,8 @@ _cset(:app_shared_files)  {
 
 _cset :compile, false
 _cset :app_webroot, ''
+_cset :app_relative_media_dir, 'media/'
+_cset :interactive_mode, true
 
 namespace :mage do
   desc <<-DESC
@@ -120,6 +122,32 @@ namespace :mage do
   DESC
   task :clean_log, :roles => [:web, :app] do
     run "cd #{current_path}#{app_webroot}/shell && php -f log.php -- clean"
+  end
+
+  namespace :files do
+    desc <<-DESC
+      Pull magento media catalog files (from remote to local with rsync)
+    DESC
+    task :pull, :roles => :app, :except => { :no_release => true } do
+      remote_files_dir = "#{current_path}#{app_webroot}/#{app_relative_media_dir}"
+      local_files_dir = app_relative_media_dir
+      first_server = find_servers_for_task(current_task).first
+
+      run_locally("rsync --recursive --times --rsh=ssh --compress --human-readable --progress #{user}@#{first_server.host}:#{remote_files_dir} #{local_files_dir}")
+    end
+
+    desc <<-DESC
+      Push magento media catalog files (from local to remote)
+    DESC
+    task :push, :roles => :app, :except => { :no_release => true } do
+      remote_files_dir = "#{current_path}#{app_webroot}/#{app_relative_media_dir}"
+      local_files_dir = app_relative_media_dir
+      first_server = find_servers_for_task(current_task).first
+
+      if !interactive_mode || Capistrano::CLI.ui.agree("Do you really want to replace remote files by local files? (y/N)")
+        run_locally("rsync --recursive --times --rsh=ssh --compress --human-readable --progress --delete #{local_files_dir} #{user}@#{first_server.host}:#{remote_files_dir}")
+      end
+    end
   end
 end
 

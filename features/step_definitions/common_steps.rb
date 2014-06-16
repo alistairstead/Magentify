@@ -36,7 +36,7 @@ Given /^an app$/ do
   template_path     = File.expand_path(File.join(__FILE__, "..", "..", "templates", "deploy.erb"))
   compiled_template = ERB.new(File.read(template_path)).result(binding)
 
-  File.open(File.join(@src_dir, "config", "deploy.rb"), 'w') {|f| 
+  File.open(File.join(@src_dir, "config", "deploy.rb"), 'w') {|f|
     f.write compiled_template
   }
 end
