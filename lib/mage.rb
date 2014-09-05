@@ -19,6 +19,47 @@ _cset :app_webroot, ''
 _cset :app_relative_media_dir, 'media/'
 _cset :interactive_mode, true
 
+
+_cset :remote_tmp_dir, "/tmp"
+_cset :local_tmp_dir, "/tmp"
+_cset :remote_dump_filename, "#{remote_tmp_dir}/dump_#{release_name}.sql"
+_cset :local_dump_filename, "#{local_tmp_dir}/dump_#{release_name}.sql"
+_cset :app_relative_magento_dir, '..'
+_cset :remote_mysqldump_command, 'mysqldump'
+_cset :local_mysql_command, 'mysql'
+_cset :local_anonymize_sql_file, ''
+_cset :db_dump_ignore_tables, []
+_cset :db_dump_cleanup, true
+
+def init_local_variables
+
+  local_file = "#{local_magento_path}/app/etc/local.xml"
+
+  unless File.exist?(local_file)
+    abort "no local.xml file found with path #{local_file}. Please specify variable local_magento_path"
+  end
+
+  require "rexml/document"
+  file = File.new(local_file)
+  doc = REXML::Document.new file
+  local_db_host = REXML::XPath.first(doc, "//default_setup/connection/host/text()")
+  local_db_username = REXML::XPath.first(doc, "//default_setup/connection/username/text()")
+  local_db_pass = REXML::XPath.first(doc, "//default_setup/connection/password/text()")
+  local_db_dbname = REXML::XPath.first(doc, "//default_setup/connection/dbname/text()")
+
+  return local_db_dbname, local_db_host, local_db_pass, local_db_username
+end
+
+def init_remote_variables
+  file = "#{current_path}#{app_webroot}/app/etc/local.xml"
+
+  db_host = capture "xmllint --nocdata --xpath '//default_setup/connection/host/text()' #{file}"
+  db_username = capture "xmllint --nocdata --xpath '//default_setup/connection/username/text()' #{file}"
+  db_pass = capture "xmllint --nocdata --xpath '//default_setup/connection/password/text()' #{file}"
+  db_dbname = capture "xmllint --nocdata --xpath '//default_setup/connection/dbname/text()' #{file}"
+  return db_dbname, db_host, db_pass, db_username
+end
+
 namespace :mage do
   desc <<-DESC
     Prepares one or more servers for deployment of Magento. Before you can use any \
@@ -149,6 +190,94 @@ namespace :mage do
       end
     end
   end
+  
+    namespace :db do
+    desc <<-DESC
+    Synchronises remote Magento-Database with local Magento-instance.
+    DESC
+    task :sync, :roles => [:web, :app] do
+
+      dump
+
+      pull
+
+      cleanup
+
+      import
+
+      anonymize
+
+    end
+    desc <<-DESC
+    Executes a custom sql-script for anonymization of current local Magento-database.
+    DESC
+    task :anonymize do
+
+      if  File.exist?(local_anonymize_sql_file)
+        local_db_dbname, local_db_host, local_db_pass, local_db_username = init_local_variables()
+
+        `#{local_mysql_command} -u#{local_db_username} -p#{local_db_pass} -h#{local_db_host} #{local_db_dbname} < #{local_anonymize_sql_file}`
+
+      end
+    end
+    desc <<-DESC
+    Downloads remote Magento-database-dump.
+    DESC
+    task :pull, :roles => [:web, :app] do
+      download remote_dump_filename + ".gz", local_dump_filename + ".gz"
+    end
+    desc <<-DESC
+    Imports downloaded database-dump into local database configured by local.xml.
+    DESC
+    task :import, :roles => [:web, :app] do
+      local_db_dbname, local_db_host, local_db_pass, local_db_username = init_local_variables()
+
+      `gunzip < #{local_dump_filename}.gz | #{local_mysql_command} -u#{local_db_username} -p#{local_db_pass} -h#{local_db_host} #{local_db_dbname}`
+
+    end
+
+    desc <<-DESC
+    Removes remote database-dump from server.
+    DESC
+    task :cleanup, :roles => [:web, :app] do
+      if db_dump_cleanup
+        run "rm #{remote_dump_filename}.gz"
+      end
+    end
+
+    desc <<-DESC
+    Dumps remote database into *.sql.gz-File. Ignores Tables specified in :db_dump_ignore_tables-Variable.
+    DESC
+    task :dump, :roles => [:web, :app] do
+
+      db_dbname, db_host, db_pass, db_username = init_remote_variables()
+
+      ignore = ''
+      db_dump_ignore_tables.each do |table|
+        ignore += "--ignore-table=#{db_dbname}.#{table} "
+      end
+
+      run "echo \"SET FOREIGN_KEY_CHECKS=0;\" > #{remote_dump_filename}"
+      run "#{remote_mysqldump_command} -u#{db_username} -p -h#{db_host} --no-data #{db_dbname} >> #{remote_dump_filename}" do |ch, _, out|
+        if out =~ /^Enter password: /
+          ch.send_data "#{db_pass}\n"
+        else
+          puts out
+        end
+      end
+      run "#{remote_mysqldump_command} -u#{db_username} -p -h#{db_host} --no-create-info #{ignore} #{db_dbname} >> #{remote_dump_filename}" do |ch, _, out|
+        if out =~ /^Enter password: /
+          ch.send_data "#{db_pass}\n"
+        else
+          puts out
+        end
+      end
+      run "echo \"SET FOREIGN_KEY_CHECKS=1;\" >> #{remote_dump_filename}"
+      run "gzip #{remote_dump_filename}"
+    end
+
+  end
+  
 end
 
 after   'deploy:setup', 'mage:setup'
