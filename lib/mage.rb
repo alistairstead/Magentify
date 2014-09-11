@@ -17,6 +17,7 @@ _cset(:app_shared_files)  {
 _cset :compile, false
 _cset :app_webroot, ''
 _cset :app_relative_media_dir, 'media/'
+_cset :local_files_dir, app_relative_media_dir
 _cset :interactive_mode, true
 
 
@@ -171,7 +172,6 @@ namespace :mage do
     DESC
     task :pull, :roles => :app, :except => { :no_release => true } do
       remote_files_dir = "#{current_path}#{app_webroot}/#{app_relative_media_dir}"
-      local_files_dir = app_relative_media_dir
       first_server = find_servers_for_task(current_task).first
 
       run_locally("rsync --recursive --times --rsh=ssh --compress --human-readable --progress #{user}@#{first_server.host}:#{remote_files_dir} #{local_files_dir}")
@@ -182,7 +182,6 @@ namespace :mage do
     DESC
     task :push, :roles => :app, :except => { :no_release => true } do
       remote_files_dir = "#{current_path}#{app_webroot}/#{app_relative_media_dir}"
-      local_files_dir = app_relative_media_dir
       first_server = find_servers_for_task(current_task).first
 
       if !interactive_mode || Capistrano::CLI.ui.agree("Do you really want to replace remote files by local files? (y/N)")
