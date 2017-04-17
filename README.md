@@ -58,7 +58,7 @@ For detailed information about how to configure and use Capistrano for deploymen
 7. Push to the branch (`git push origin my-new-feature`)
 8. Create new Pull Request
 
-##Getting your development environment to work
+## Getting your development environment to work
 
 1. You're going to need a working sshd server in your localhost, and access for your
    development user without password.
